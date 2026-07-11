@@ -14,7 +14,7 @@ pub struct MaskingOutput<B: Backend> {
 
 #[derive(Clone, Debug)]
 pub struct MaskingConfig {
-    mask_ratio: f64,
+    pub mask_ratio: f64,
 }
 
 impl Default for MaskingConfig {
@@ -40,7 +40,7 @@ impl MaskingConfig {
 
 #[derive(Clone, Debug, Module)]
 pub struct Masking {
-    mask_ratio: f64,
+    pub mask_ratio: f64,
 }
 
 impl Masking {
