@@ -225,7 +225,7 @@ mod tests {
     #[test]
     fn model_can_be_built_from_config() {
         let config = MaskedAutoencoderViTConfig::default();
-        let model = config.init::<B>(&D::DefaultDevice);
+        let _model = config.init::<B>(&D::DefaultDevice);
     }
 
     #[test]
@@ -279,8 +279,6 @@ mod tests {
             input.dims()[2..].try_into().unwrap(),
         );
 
-        let num_patches =
-            (config.image_size[0] / config.patch_size) * (config.image_size[1] / config.patch_size);
         assert_eq!(
             decoder_output.dims(),
             [

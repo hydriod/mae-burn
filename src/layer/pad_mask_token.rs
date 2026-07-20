@@ -22,7 +22,11 @@ pub struct PadMaskToken<B: Backend> {
 }
 
 impl<B: Backend> PadMaskToken<B> {
-    pub fn forward(&self, encoded_output: Tensor<B, 3>, ids_restore: Tensor<B, 1, Int>) -> Tensor<B, 3> {
+    pub fn forward(
+        &self,
+        encoded_output: Tensor<B, 3>,
+        ids_restore: Tensor<B, 1, Int>,
+    ) -> Tensor<B, 3> {
         let batch_size = encoded_output.dims()[0];
         let num_masked_patches = encoded_output.dims()[1];
         let patch_dim = encoded_output.dims()[2];
