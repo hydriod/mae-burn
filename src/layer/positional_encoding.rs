@@ -128,7 +128,6 @@ mod tests {
 
     #[test]
     fn test_positional_encoding_2d() {
-        
         let device = WgpuDevice::DefaultDevice;
         const EMBED_DIM: usize = 32;
         const GRID_SIZE: [usize; 2] = [16, 16];

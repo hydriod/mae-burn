@@ -2611,7 +2611,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mae"
+name = "mae_burn"
 version = "0.1.0"
 dependencies = [
  "burn",
