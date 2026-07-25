@@ -1,27 +1,33 @@
 use burn::{prelude::*, tensor::Distribution::Normal};
 
+/// Configuration for [`PadMaskToken`].
 #[derive(Debug, Clone)]
 pub struct PadMaskTokenConfig {
+    /// Dimension of the learned mask token.
     pub token_dim: usize,
 }
 
 impl PadMaskTokenConfig {
+    /// Creates a new mask-token configuration.
     pub fn new(token_dim: usize) -> Self {
         Self { token_dim }
     }
 
+    /// Initializes the mask-token module on the given device.
     pub fn init<B: Backend>(&self, device: &B::Device) -> PadMaskToken<B> {
         let mask_token = Tensor::<B, 3>::random([1, 1, self.token_dim], Normal(0., 1.), device);
         PadMaskToken { mask_token }
     }
 }
 
+/// Learns and inserts mask tokens for missing patch positions.
 #[derive(Debug, Module)]
 pub struct PadMaskToken<B: Backend> {
     mask_token: Tensor<B, 3>,
 }
 
 impl<B: Backend> PadMaskToken<B> {
+    /// Appends mask tokens and restores the original patch order.
     pub fn forward(
         &self,
         encoded_output: Tensor<B, 3>,

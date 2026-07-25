@@ -5,15 +5,21 @@ use burn::{
 };
 use rand::seq::SliceRandom;
 
+/// Output of [`Masking::forward`].
 #[derive(Debug)]
 pub struct MaskingOutput<B: Backend> {
+    /// Patches that remain visible after masking.
     pub masked_patches: Tensor<B, 3>,
+    /// Binary mask where masked patches are marked with `1`.
     pub mask: Tensor<B, 1>,
+    /// Indices that restore the original patch ordering.
     pub ids_restore: Tensor<B, 1, Int>,
 }
 
+/// Configuration for [`Masking`].
 #[derive(Clone, Debug)]
 pub struct MaskingConfig {
+    /// Fraction of patches to mask.
     pub mask_ratio: f64,
 }
 
@@ -24,6 +30,7 @@ impl Default for MaskingConfig {
 }
 
 impl MaskingConfig {
+    /// Creates a new masking configuration.
     pub fn new(mask_ratio: f64) -> Self {
         assert!(
             (0.0..1.0).contains(&mask_ratio),
@@ -33,19 +40,27 @@ impl MaskingConfig {
         Self { mask_ratio }
     }
 
+    /// Builds the masking module.
+    ///
+    /// # Example
+    /// ```
+    /// let model = mae_burn::layer::MaskingConfig::default().init();
+    /// ```
     pub fn init(&self) -> Masking {
         Masking::new(self.mask_ratio)
     }
 }
 
+/// Randomly masks a fraction of input patches.
 #[derive(Clone, Debug, Module)]
 pub struct Masking {
+    /// Fraction of patches to mask.
     pub mask_ratio: f64,
 }
 
 impl Masking {
+    /// Creates a new masking layer.
     pub fn new(mask_ratio: f64) -> Self {
-        // Ensure that the mask_ratio is within the valid range [0.0, 1.0)
         assert!(
             (0.0..1.0).contains(&mask_ratio),
             "mask_ratio must be in [0.0, 1.0)"
@@ -54,6 +69,39 @@ impl Masking {
         Self { mask_ratio }
     }
 
+    /// Applies masking to a batch of patch embeddings.
+    ///
+    /// # Example
+    /// ```
+    /// use mae_burn::layer::mask::MaskingConfig;
+    /// use burn::{backend::wgpu::WgpuDevice, tensor::TensorData};
+    /// type B = burn::backend::wgpu::Wgpu;
+    ///
+    /// fn applies_mask_ratio_to_patch_count() {
+    ///     let device = WgpuDevice::DefaultDevice;
+    ///     const NUM_BATCHES: usize = 2;
+    ///     const NUM_PATCHES: usize = 8;
+    ///     const PATCH_DIM: usize = 4;
+    ///     const MASK_RATIO: f64 = 0.5;
+    ///
+    ///     let masking = MaskingConfig::new(MASK_RATIO).init();
+    ///     let patches = burn::tensor::Tensor::<B, 3>::from_data(
+    ///         TensorData::ones::<f32, _>([NUM_BATCHES, NUM_PATCHES, PATCH_DIM]),
+    ///         &device,
+    ///     );
+    ///
+    ///     let output = masking.forward(patches);
+    ///
+    ///     assert_eq!(output.mask.dims(), [NUM_PATCHES]);
+    ///     assert_eq!(output.ids_restore.dims(), [NUM_PATCHES]);
+    ///     assert_eq!(output.masked_patches.dims()[0], NUM_BATCHES);
+    ///     assert_eq!(
+    ///         output.masked_patches.dims()[1],
+    ///         (NUM_PATCHES as f64 * (1.0 - MASK_RATIO)) as usize
+    ///     );
+    ///     assert_eq!(output.masked_patches.dims()[2], PATCH_DIM);
+    /// }
+    /// ```
     pub fn forward<B: Backend>(&self, patches: Tensor<B, 3>) -> MaskingOutput<B> {
         let device = patches.device();
         let [batch_size, num_patches, patch_dim] = patches.dims();

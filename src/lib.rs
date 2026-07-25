@@ -1,3 +1,5 @@
+//! Masked autoencoder components built on `burn`.
+
 pub mod layer;
 pub mod model;
 

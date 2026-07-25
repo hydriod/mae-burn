@@ -9,6 +9,7 @@ use burn::{
 
 const MAX_TIMESCALE: f64 = 10000.;
 
+/// Configuration for a two-dimensional sine-cosine positional encoding.
 #[derive(Clone, Debug)]
 pub struct PositionalEncoding2dConfig {
     embed_dim: usize,
@@ -98,6 +99,7 @@ fn get_1d_sincos_pos_embed_from_grid<B: Backend>(
 
 // TODO: positional encoding のshapeを2次元にする
 impl PositionalEncoding2dConfig {
+    /// Creates a new positional-encoding configuration.
     pub fn new(embed_dim: usize, grid_size: [usize; 2], cls_token: bool) -> Self {
         Self {
             embed_dim,
@@ -106,6 +108,7 @@ impl PositionalEncoding2dConfig {
         }
     }
 
+    /// Builds the positional-encoding module on the given device.
     pub fn init<B: Backend>(&self, device: &B::Device) -> PositionalEncoding<B> {
         let positional_encoding =
             get_2d_sincos_pos_embed(self.embed_dim, self.grid_size, self.cls_token, device);

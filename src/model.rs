@@ -7,25 +7,38 @@ use burn::nn::{
 };
 use burn::prelude::*;
 
+/// Output from the encoder stage.
 pub struct EncoderOutput<B: Backend> {
+    /// Encoded visible patches after masking and transformer encoding.
     pub encoded_patches: Tensor<B, 3>,
+    /// Binary mask where masked patches are marked with `1`.
     pub mask: Tensor<B, 1>,
+    /// Indices used to restore the original patch order.
     pub ids_restore: Tensor<B, 1, Int>,
 }
 
+/// Configuration for [`MaskedAutoencoderViT`].
 #[derive(Clone, Debug)]
 pub struct MaskedAutoencoderViTConfig {
-    // Define the configuration parameters for the Vision Transformer
-    // For example, you might have fields for the number of layers, hidden size, etc.
+    /// Input image height and width.
     pub image_size: [usize; 2],
+    /// Size of each square patch.
     pub patch_size: usize,
+    /// Number of channels in the input image.
     pub in_channels: usize,
+    /// Encoder embedding dimension.
     pub embed_dim: usize,
+    /// Number of encoder transformer blocks.
     pub depth: usize,
+    /// Number of attention heads in the encoder.
     pub num_heads: usize,
+    /// Decoder embedding dimension.
     pub decoder_embed_dim: usize,
+    /// Number of decoder transformer blocks.
     pub decoder_depth: usize,
+    /// Number of attention heads in the decoder.
     pub decoder_num_heads: usize,
+    /// MLP expansion ratio used in transformer blocks.
     pub mlp_ratio: f64,
 }
 
@@ -47,6 +60,7 @@ impl Default for MaskedAutoencoderViTConfig {
 }
 
 impl MaskedAutoencoderViTConfig {
+    /// Builds a model instance on the given device.
     pub fn init<B: Backend>(&self, device: &B::Device) -> MaskedAutoencoderViT<B> {
         let patch_embedding = Conv2dConfig::new(
             [self.in_channels, self.embed_dim],
@@ -112,10 +126,9 @@ impl MaskedAutoencoderViTConfig {
     }
 }
 
+/// Masked autoencoder Vision Transformer.
 #[derive(Debug, Module)]
 pub struct MaskedAutoencoderViT<B: Backend> {
-    // Define the fields for the Vision Transformer model
-    // For example, you might have fields for the number of layers, hidden size, etc.
     patch_embedding: Conv2d<B>,
     masking: layer::Masking,
     positional_encoding: PositionalEncoding<B>,
@@ -130,23 +143,21 @@ pub struct MaskedAutoencoderViT<B: Backend> {
 }
 
 impl<B: Backend> MaskedAutoencoderViT<B> {
+    /// Runs the full autoencoder and returns the reconstructed image tensor.
     pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
-        // Implement the forward pass of the Vision Transformer model
-        let image_size = [input.dims()[2], input.dims()[3]]; // Assuming input shape is [batch_size, channels, height, width]
+        let image_size = [input.dims()[2], input.dims()[3]];
 
         let encoder_output = self.forward_encoder(input);
 
         let encoded_output = encoder_output.encoded_patches;
         let ids_restore = encoder_output.ids_restore;
 
-        // Decode the encoded output back into the original image space
         let decoded_output = self.forward_decoder(encoded_output, ids_restore, image_size);
         decoded_output
     }
 
+    /// Encodes an input image into masked patch features.
     pub fn forward_encoder(&self, input: Tensor<B, 4>) -> EncoderOutput<B> {
-        // Implement the forward pass of the Vision Transformer encoder
-        // Encode the input image into feature representations, apply masking
         let patches = self.patch_embedding.forward(input);
         let patches = self.patchify(patches);
         let patches = self.positional_encoding.forward(patches);
@@ -163,14 +174,13 @@ impl<B: Backend> MaskedAutoencoderViT<B> {
         }
     }
 
+    /// Decodes masked patch features back into image space.
     pub fn forward_decoder(
         &self,
         encoded_output: Tensor<B, 3>,
         ids_restore: Tensor<B, 1, Int>,
         image_size: [usize; 2],
     ) -> Tensor<B, 4> {
-        // Implement the forward pass of the Vision Transformer decoder
-        // Decode the encoded output back into the original image space
         let encoded_output = self.decoder_embed.forward(encoded_output);
         let encoded_with_mask_tokens = self.pad_mask.forward(encoded_output, ids_restore);
         let decoder_input = TransformerEncoderInput::new(encoded_with_mask_tokens);
@@ -182,11 +192,9 @@ impl<B: Backend> MaskedAutoencoderViT<B> {
     }
 
     fn patchify(&self, input: Tensor<B, 4>) -> Tensor<B, 3> {
-        // Implement the patchify logic to convert the input image into patches
         let [batch_size, channels, num_patches_h, num_patches_w] = input.dims();
         let num_patches = num_patches_h * num_patches_w;
 
-        // Reshape the input tensor into patches
         input
             .reshape([batch_size, channels, num_patches])
             .permute([0, 2, 1])
@@ -198,13 +206,11 @@ impl<B: Backend> MaskedAutoencoderViT<B> {
         original_height: usize,
         original_width: usize,
     ) -> Tensor<B, 4> {
-        // Implement the unpatchify logic to convert patches back into the original image
         let [batch_size, _num_patches, patch_dim] = patches.dims();
-        let patch_size = self.patch_embedding.kernel_size[0]; // Assuming square patches
+        let patch_size = self.patch_embedding.kernel_size[0];
         let num_patches_h = original_height / patch_size;
         let num_patches_w = original_width / patch_size;
 
-        // Reshape the patches tensor back into the original image shape
         patches
             .reshape([batch_size, num_patches_h, num_patches_w, patch_dim])
             .permute([0, 3, 1, 2])
