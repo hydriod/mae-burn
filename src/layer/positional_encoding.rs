@@ -100,6 +100,24 @@ fn get_1d_sincos_pos_embed_from_grid<B: Backend>(
 // TODO: positional encoding のshapeを2次元にする
 impl PositionalEncoding2dConfig {
     /// Creates a new positional-encoding configuration.
+    ///
+    /// # Arguments
+    ///
+    /// - `embed_dim`: Size of the embedding dimension.
+    /// - `grid_size`: Height and width of the patch grid.
+    /// - `cls_token`: Whether to include a class-token embedding.
+    ///
+    /// # Return value
+    ///
+    /// Returns a [`PositionalEncoding2dConfig`] for 2D sine-cosine embeddings.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use mae_burn::layer::PositionalEncoding2dConfig;
+    ///
+    /// let config = PositionalEncoding2dConfig::new(768, [14, 14], true);
+    /// ```
     pub fn new(embed_dim: usize, grid_size: [usize; 2], cls_token: bool) -> Self {
         Self {
             embed_dim,
@@ -109,6 +127,26 @@ impl PositionalEncoding2dConfig {
     }
 
     /// Builds the positional-encoding module on the given device.
+    ///
+    /// # Arguments
+    ///
+    /// - `device`: Target device used to allocate the positional embedding tensor.
+    ///
+    /// # Return value
+    ///
+    /// Returns a [`PositionalEncoding`] module.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use burn::backend::wgpu::WgpuDevice;
+    /// use mae_burn::layer::PositionalEncoding2dConfig;
+    ///
+    /// type B = burn::backend::Wgpu;
+    ///
+    /// let device = WgpuDevice::DefaultDevice;
+    /// let module = PositionalEncoding2dConfig::new(768, [14, 14], true).init::<B>(&device);
+    /// ```
     pub fn init<B: Backend>(&self, device: &B::Device) -> PositionalEncoding<B> {
         let positional_encoding =
             get_2d_sincos_pos_embed(self.embed_dim, self.grid_size, self.cls_token, device);

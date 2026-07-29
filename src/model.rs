@@ -61,6 +61,27 @@ impl Default for MaskedAutoencoderViTConfig {
 
 impl MaskedAutoencoderViTConfig {
     /// Builds a model instance on the given device.
+    ///
+    /// # Arguments
+    ///
+    /// - `device`: Target device used to initialize model parameters.
+    ///
+    /// # Return value
+    ///
+    /// Returns a fully initialized [`MaskedAutoencoderViT`] on `device`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use burn::backend::wgpu::WgpuDevice;
+    /// use mae_burn::MaskedAutoencoderViTConfig;
+    ///
+    /// type B = burn::backend::Wgpu;
+    ///
+    /// let device = WgpuDevice::DefaultDevice;
+    /// let config = MaskedAutoencoderViTConfig::default();
+    /// let model = config.init::<B>(&device);
+    /// ```
     pub fn init<B: Backend>(&self, device: &B::Device) -> MaskedAutoencoderViT<B> {
         let patch_embedding = Conv2dConfig::new(
             [self.in_channels, self.embed_dim],
@@ -144,6 +165,30 @@ pub struct MaskedAutoencoderViT<B: Backend> {
 
 impl<B: Backend> MaskedAutoencoderViT<B> {
     /// Runs the full autoencoder and returns the reconstructed image tensor.
+    ///
+    /// # Arguments
+    ///
+    /// - `input`: A 4D image tensor shaped `[batch, channels, height, width]`.
+    ///
+    /// # Return value
+    ///
+    /// Returns the reconstructed image tensor.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use burn::Tensor;
+    /// use burn::backend::wgpu::WgpuDevice;
+    /// use mae_burn::MaskedAutoencoderViTConfig;
+    ///
+    /// type B = burn::backend::Wgpu;
+    ///
+    /// let device = WgpuDevice::DefaultDevice;
+    /// let config = MaskedAutoencoderViTConfig::default();
+    /// let model = config.init::<B>(&device);
+    /// let input = Tensor::<B, 4>::zeros([1, 3, 224, 224], &device);
+    /// let output = model.forward(input);
+    /// ```
     pub fn forward(&self, input: Tensor<B, 4>) -> Tensor<B, 4> {
         let image_size = [input.dims()[2], input.dims()[3]];
 
@@ -157,6 +202,30 @@ impl<B: Backend> MaskedAutoencoderViT<B> {
     }
 
     /// Encodes an input image into masked patch features.
+    ///
+    /// # Arguments
+    ///
+    /// - `input`: A 4D image tensor shaped `[batch, channels, height, width]`.
+    ///
+    /// # Return value
+    ///
+    /// Returns the encoded visible patches, mask, and restoration indices.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use burn::Tensor;
+    /// use burn::backend::wgpu::WgpuDevice;
+    /// use mae_burn::MaskedAutoencoderViTConfig;
+    ///
+    /// type B = burn::backend::Wgpu;
+    ///
+    /// let device = WgpuDevice::DefaultDevice;
+    /// let config = MaskedAutoencoderViTConfig::default();
+    /// let model = config.init::<B>(&device);
+    /// let input = Tensor::<B, 4>::zeros([1, 3, 224, 224], &device);
+    /// let output = model.forward_encoder(input);
+    /// ```
     pub fn forward_encoder(&self, input: Tensor<B, 4>) -> EncoderOutput<B> {
         let patches = self.patch_embedding.forward(input);
         let patches = self.patchify(patches);
@@ -175,6 +244,36 @@ impl<B: Backend> MaskedAutoencoderViT<B> {
     }
 
     /// Decodes masked patch features back into image space.
+    ///
+    /// # Arguments
+    ///
+    /// - `encoded_output`: Visible patch features produced by the encoder.
+    /// - `ids_restore`: Restoration indices produced by the masking step.
+    /// - `image_size`: Original image height and width.
+    ///
+    /// # Return value
+    ///
+    /// Returns the reconstructed image tensor.
+    /// 
+    /// # Panic
+    /// Panics if `ids_restore.size()[0] < encoded_output.size()[1]`.
+    /// 
+    /// # Example
+    ///
+    /// ```
+    /// use burn::Tensor;
+    /// use burn::backend::wgpu::WgpuDevice;
+    /// use mae_burn::MaskedAutoencoderViTConfig;
+    ///
+    /// type B = burn::backend::Wgpu;
+    ///
+    /// let device = WgpuDevice::DefaultDevice;
+    /// let config = MaskedAutoencoderViTConfig::default();
+    /// let model = config.init::<B>(&device);
+    /// let encoded_output = Tensor::<B, 3>::zeros([1, 49, config.embed_dim], &device);
+    /// let ids_restore = Tensor::<B, 1, burn::tensor::Int>::arange(0..14*14, &device);
+    /// let output = model.forward_decoder(encoded_output, ids_restore, config.image_size);
+    /// ```
     pub fn forward_decoder(
         &self,
         encoded_output: Tensor<B, 3>,

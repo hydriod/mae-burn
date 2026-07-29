@@ -9,11 +9,47 @@ pub struct PadMaskTokenConfig {
 
 impl PadMaskTokenConfig {
     /// Creates a new mask-token configuration.
+    ///
+    /// # Arguments
+    ///
+    /// - `token_dim`: Dimension of the learned mask token.
+    ///
+    /// # Return value
+    ///
+    /// Returns a [`PadMaskTokenConfig`] with the requested token dimension.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use mae_burn::layer::PadMaskTokenConfig;
+    ///
+    /// let config = PadMaskTokenConfig::new(512);
+    /// ```
     pub fn new(token_dim: usize) -> Self {
         Self { token_dim }
     }
 
     /// Initializes the mask-token module on the given device.
+    ///
+    /// # Arguments
+    ///
+    /// - `device`: Target device used to initialize the learned mask token.
+    ///
+    /// # Return value
+    ///
+    /// Returns a [`PadMaskToken`] module.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use burn::backend::wgpu::WgpuDevice;
+    /// use mae_burn::layer::PadMaskTokenConfig;
+    ///
+    /// type B = burn::backend::Wgpu;
+    ///
+    /// let device = WgpuDevice::DefaultDevice;
+    /// let module = PadMaskTokenConfig::new(512).init::<B>(&device);
+    /// ```
     pub fn init<B: Backend>(&self, device: &B::Device) -> PadMaskToken<B> {
         let mask_token = Tensor::<B, 3>::random([1, 1, self.token_dim], Normal(0., 1.), device);
         PadMaskToken { mask_token }
@@ -28,6 +64,36 @@ pub struct PadMaskToken<B: Backend> {
 
 impl<B: Backend> PadMaskToken<B> {
     /// Appends mask tokens and restores the original patch order.
+    ///
+    /// # Arguments
+    ///
+    /// - `encoded_output`: Visible patch embeddings produced by the encoder.
+    /// - `ids_restore`: Restoration indices that place visible and masked patches back in order.
+    ///
+    /// # Return value
+    ///
+    /// Returns the padded patch sequence with learned mask tokens inserted.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use burn::{backend::wgpu::WgpuDevice, tensor::TensorData};
+    /// use mae_burn::layer::PadMaskTokenConfig;
+    ///
+    /// type B = burn::backend::wgpu::Wgpu;
+    ///
+    /// let device = WgpuDevice::DefaultDevice;
+    /// let module = PadMaskTokenConfig::new(32).init::<B>(&device);
+    /// let encoded_output = burn::tensor::Tensor::<B, 3>::from_data(
+    ///     TensorData::ones::<f32, _>([1, 3, 32]),
+    ///     &device,
+    /// );
+    /// let ids_restore = burn::tensor::Tensor::<B, 1, burn::tensor::Int>::from_data(
+    ///     TensorData::new(vec![0_i64, 1, 2, 3, 4, 5], [6]),
+    ///     &device,
+    /// );
+    /// let output = module.forward(encoded_output, ids_restore);
+    /// ```
     pub fn forward(
         &self,
         encoded_output: Tensor<B, 3>,
