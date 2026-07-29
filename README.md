@@ -28,6 +28,32 @@
 
 Tests use the WGPU backend.
 
+## Installation
+
+- Install the Rust toolchain (if you don't have it):
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup update stable
+rustup default stable
+```
+
+On Windows, run the installer from https://rustup.rs and follow the prompts.
+
+- Add this crate to your project's `Cargo.toml` (from crates.io):
+
+```toml
+[dependencies]
+mae-burn = "0.1.0"
+```
+
+Or use a local path during development:
+
+```toml
+[dependencies]
+mae-burn = { path = "../mae-burn" }
+```
+
 ## Usage
 
 ### Initializing the model

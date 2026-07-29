@@ -28,6 +28,32 @@
 
 テストでは WGPU バックエンドを使います。
 
+## インストール
+
+- Rust ツールチェーンが未インストールの場合は rustup を使って導入してください。
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup update stable
+rustup default stable
+```
+
+Windows では https://rustup.rs のインストーラを実行して指示に従ってください。
+
+- crates.io から依存関係として追加する場合（例）:
+
+```toml
+[dependencies]
+mae-burn = "0.1.0"
+```
+
+開発中にローカルパスを使う場合:
+
+```toml
+[dependencies]
+mae-burn = { path = "../mae-burn" }
+```
+
 ## 使い方
 
 ### モデルの初期化
