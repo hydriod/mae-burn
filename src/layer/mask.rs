@@ -5,15 +5,21 @@ use burn::{
 };
 use rand::seq::SliceRandom;
 
+/// Output of [`Masking::forward`].
 #[derive(Debug)]
 pub struct MaskingOutput<B: Backend> {
+    /// Patches that remain visible after masking.
     pub masked_patches: Tensor<B, 3>,
+    /// Binary mask where masked patches are marked with `1`.
     pub mask: Tensor<B, 1>,
+    /// Indices that restore the original patch ordering.
     pub ids_restore: Tensor<B, 1, Int>,
 }
 
+/// Configuration for [`Masking`].
 #[derive(Clone, Debug)]
 pub struct MaskingConfig {
+    /// Fraction of patches to mask.
     pub mask_ratio: f64,
 }
 
@@ -24,6 +30,23 @@ impl Default for MaskingConfig {
 }
 
 impl MaskingConfig {
+    /// Creates a new masking configuration.
+    ///
+    /// # Arguments
+    ///
+    /// - `mask_ratio`: Fraction of patches to mask. Must be in `[0.0, 1.0)`.
+    ///
+    /// # Return value
+    ///
+    /// Returns a [`MaskingConfig`] with the requested mask ratio.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use mae_burn::layer::MaskingConfig;
+    ///
+    /// let config = MaskingConfig::new(0.75);
+    /// ```
     pub fn new(mask_ratio: f64) -> Self {
         assert!(
             (0.0..1.0).contains(&mask_ratio),
@@ -33,19 +56,50 @@ impl MaskingConfig {
         Self { mask_ratio }
     }
 
+    /// Builds the masking module.
+    ///
+    /// # Return value
+    ///
+    /// Returns a [`Masking`] module.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use mae_burn::layer::MaskingConfig;
+    ///
+    /// let model = MaskingConfig::default().init();
+    /// ```
     pub fn init(&self) -> Masking {
         Masking::new(self.mask_ratio)
     }
 }
 
+/// Randomly masks a fraction of input patches.
 #[derive(Clone, Debug, Module)]
 pub struct Masking {
+    /// Fraction of patches to mask.
     pub mask_ratio: f64,
 }
 
 impl Masking {
+    /// Creates a new masking layer.
+    ///
+    /// # Arguments
+    ///
+    /// - `mask_ratio`: Fraction of patches to mask. Must be in `[0.0, 1.0)`.
+    ///
+    /// # Return value
+    ///
+    /// Returns a [`Masking`] layer.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use mae_burn::layer::Masking;
+    ///
+    /// let masking = Masking::new(0.75);
+    /// ```
     pub fn new(mask_ratio: f64) -> Self {
-        // Ensure that the mask_ratio is within the valid range [0.0, 1.0)
         assert!(
             (0.0..1.0).contains(&mask_ratio),
             "mask_ratio must be in [0.0, 1.0)"
@@ -54,6 +108,32 @@ impl Masking {
         Self { mask_ratio }
     }
 
+    /// Applies masking to a batch of patch embeddings.
+    ///
+    /// # Arguments
+    ///
+    /// - `patches`: Input patch embeddings shaped `[batch, patches, dim]`.
+    ///
+    /// # Return value
+    ///
+    /// Returns the visible patches together with the binary mask and restoration indices.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use burn::{backend::wgpu::WgpuDevice, tensor::TensorData};
+    /// use mae_burn::layer::MaskingConfig;
+    ///
+    /// type B = burn::backend::wgpu::Wgpu;
+    ///
+    /// let device = WgpuDevice::DefaultDevice;
+    /// let masking = MaskingConfig::new(0.5).init();
+    /// let patches = burn::tensor::Tensor::<B, 3>::from_data(
+    ///     TensorData::ones::<f32, _>([2, 8, 4]),
+    ///     &device,
+    /// );
+    /// let output = masking.forward(patches);
+    /// ```
     pub fn forward<B: Backend>(&self, patches: Tensor<B, 3>) -> MaskingOutput<B> {
         let device = patches.device();
         let [batch_size, num_patches, patch_dim] = patches.dims();
