@@ -4,6 +4,8 @@ version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "Masked Autoencoder using Burn framework"
+documentation = "https://docs.rs/mae_burn"
+repository = "https://github.com/hydriod/mae-burn"
 
 [dependencies]
 burn = { version = "0.21.0", default-features = false, features = ["autodiff"] }
